@@ -1,7 +1,6 @@
-from datasets import load_dataset
+import kagglehub
 
-print("Downloading dataset...")
+# Download latest version
+path = kagglehub.dataset_download("dorukdemirci/asl-alphabet-dataset")
 
-dataset = load_dataset("ZahidYasinMittha/American-Sign-Language-Dataset")
-
-print(dataset)
+print("Path to dataset files:", path)

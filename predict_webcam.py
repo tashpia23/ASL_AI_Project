@@ -1,7 +1,10 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-import os
+import pickle
+
+with open("asl_model.pkl", "rb") as f:
+    model = pickle.load(f)
 
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
@@ -15,16 +18,6 @@ hands = mp_hands.Hands(
 
 cap = cv2.VideoCapture(0)
 
-label = input("Enter sign label (example: A): ").upper()
-
-save_dir = "dataset"
-os.makedirs(save_dir, exist_ok=True)
-
-data = []
-
-print("Press S to save sample")
-print("Press Q to quit")
-
 while True:
     success, frame = cap.read()
     if not success:
@@ -34,7 +27,7 @@ while True:
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = hands.process(rgb)
 
-    landmarks = None
+    predicted_label = "No hand"
 
     if results.multi_hand_landmarks:
         for hand_landmarks in results.multi_hand_landmarks:
@@ -50,26 +43,17 @@ while True:
                 points.append(lm.y - base_y)
                 points.append(lm.z - base_z)
 
-            landmarks = points
+            sample = np.array(points).reshape(1, -1)
+            predicted_label = model.predict(sample)[0]
 
-    cv2.putText(frame, f"Label: {label}", (10, 40),
+    cv2.putText(frame, f"Prediction: {predicted_label}", (10, 40),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.imshow("Collect Data", frame)
+
+    cv2.imshow("ASL Prediction", frame)
 
     key = cv2.waitKey(1) & 0xFF
-
-    if key == ord('s') and landmarks is not None:
-        data.append(landmarks)
-        print("Sample saved:", len(data))
-
-    if key == ord('q'):
+    if key == 27 or key == ord('q'):
         break
 
 cap.release()
 cv2.destroyAllWindows()
-
-if len(data) > 0:
-    np.save(os.path.join(save_dir, f"{label}.npy"), np.array(data))
-    print(f"Saved {len(data)} samples for label {label}")
-else:
-    print("No data saved.")
